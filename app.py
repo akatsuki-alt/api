@@ -4,6 +4,8 @@ from common.database.objects import *
 from common.app import database
 from datetime import date
 
+from .query import build_query
+
 app = FastAPI()
 
 @app.get("/user")
@@ -63,14 +65,17 @@ async def score(server: str, id: int):
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/leaderboard/{type}")
-async def leaderboard(type: str, server: str, mode: int, relax: int, page: int = 1, length: int = 100):
+async def leaderboard(type: str, server: str, mode: int, relax: int, query: str = "", page: int = 1, length: int = 100):
     length = min(1000, length)
     with database.session as session:
-        if (leaderboard := session.query(DBStatsCompact).filter(
+        q = session.query(DBStatsCompact).filter(
             DBStatsCompact.server == server,
             DBStatsCompact.mode == mode,
             DBStatsCompact.relax == relax,
             DBStatsCompact.leaderboard_type == type,
-        )).order_by(DBStatsCompact.global_rank).offset((page - 1) * length).limit(length).all():
+        ).order_by(DBStatsCompact.global_rank)
+        if query:
+            q = build_query(q, DBStatsCompact, query.split(","))
+        if (leaderboard := q.offset((page - 1) * length).limit(length).all()):
             return [item for item in leaderboard]
         return []
