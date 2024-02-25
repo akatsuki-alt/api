@@ -44,7 +44,7 @@ async def user_stats(server: str, id: int, mode: int, relax: int, date: date = d
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/user/stats/all")
-async def user_stats(server: str, id: int, mode: int, relax: int, date: date = date.today()):
+async def user_stats_all(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.session as session:
         if (stats := session.query(DBStats.date).filter(
             DBStats.user_id == id,
@@ -53,4 +53,11 @@ async def user_stats(server: str, id: int, mode: int, relax: int, date: date = d
             DBStats.relax == relax,
         ).all()):
             return [date[0].isoformat() for date in stats]
+        raise HTTPException(status_code=404, detail="Item not found")
+
+@app.get("/score")
+async def score(server: str, id: int):
+    with database.session as session:
+        if (score := session.get(DBScore, (id, server))):
+            return score
         raise HTTPException(status_code=404, detail="Item not found")
