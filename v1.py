@@ -1,21 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException
 
 from common.database.objects import *
 from common.app import database
 from datetime import date
 
 from .query import build_query
+from . import app
 
-app = FastAPI()
-
-@app.get("/user")
+@app.get("/api/v1/user")
 async def user(server: str, id: int):
     with database.managed_session() as session:
         if (user := session.get(DBUser, (id, server))):
             return user
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/beatmap/{id}")
+@app.get("/api/v1/beatmap/{id}")
 async def beatmap(id: int):
     with database.managed_session() as session:
         if (beatmap := session.get(DBBeatmap, id)):
@@ -23,7 +22,7 @@ async def beatmap(id: int):
             return beatmap
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/beatmapset/{id}")
+@app.get("/api/v1/beatmapset/{id}")
 async def beatmapset(id: int):
     with database.managed_session() as session:
         if (beatmapset := session.get(DBBeatmapset, id)):
@@ -32,14 +31,14 @@ async def beatmapset(id: int):
             return beatmapset
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/beatmap/pack/{tag}")
+@app.get("/api/v1/beatmap/pack/{tag}")
 async def beatmap_pack(tag: str):
     with database.managed_session() as session:
         if (pack := session.get(DBBeatmapPack, tag)):
             return pack
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/beatmap/pack/{tag}/completion")
+@app.get("/api/v1/beatmap/pack/{tag}/completion")
 async def user_beatmap_pack_completion(tag: str, server: str, user_id: int, mode: int, relax: int):
     with database.managed_session() as session:
         sets = session.query(DBBeatmapset).filter(DBBeatmapset.pack_tags.any(tag)).all()
@@ -55,7 +54,7 @@ async def user_beatmap_pack_completion(tag: str, server: str, user_id: int, mode
                     result['uncompleted'].append(beatmap.id)
         return result
 
-@app.get("/user/stats")
+@app.get("/api/v1/user/stats")
 async def user_stats(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.managed_session() as session:
         if (stats := session.query(DBStats).filter(
@@ -68,7 +67,7 @@ async def user_stats(server: str, id: int, mode: int, relax: int, date: date = d
             return stats
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/user/stats/all")
+@app.get("/api/v1/user/stats/all")
 async def user_stats_all(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.managed_session() as session:
         if (stats := session.query(DBStats.date).filter(
@@ -80,14 +79,14 @@ async def user_stats_all(server: str, id: int, mode: int, relax: int, date: date
             return [date[0].isoformat() for date in stats]
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/score")
+@app.get("/api/v1/score")
 async def score(server: str, id: int):
     with database.managed_session() as session:
         if (score := session.get(DBScore, (id, server))):
             return score
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/score/search")
+@app.get("/api/v1/score/search")
 async def query_scores(query: str, page: int = 1, length: int = 100):
     length = min(1000, length)
     with database.managed_session() as session:
@@ -96,7 +95,7 @@ async def query_scores(query: str, page: int = 1, length: int = 100):
             return [item for item in scores]
         return []
 
-@app.get("/leaderboard/{type}")
+@app.get("/api/v1/leaderboard/{type}")
 async def leaderboard(type: str, server: str, mode: int, relax: int, query: str = "", page: int = 1, length: int = 100):
     length = min(1000, length)
     with database.managed_session() as session:
