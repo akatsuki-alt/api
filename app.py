@@ -64,6 +64,15 @@ async def score(server: str, id: int):
             return score
         raise HTTPException(status_code=404, detail="Item not found")
 
+@app.get("/score/search")
+async def query_scores(query: str, page: int = 1, length: int = 100):
+    length = min(1000, length)
+    with database.session as session:
+        q = build_query(session.query(DBScore), DBScore, query.split(","))
+        if (scores := q.offset((page - 1) * length).limit(length).all()):
+            return [item for item in scores]
+        return []
+
 @app.get("/leaderboard/{type}")
 async def leaderboard(type: str, server: str, mode: int, relax: int, query: str = "", page: int = 1, length: int = 100):
     length = min(1000, length)
