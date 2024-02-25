@@ -61,3 +61,16 @@ async def score(server: str, id: int):
         if (score := session.get(DBScore, (id, server))):
             return score
         raise HTTPException(status_code=404, detail="Item not found")
+
+@app.get("/leaderboard/{type}")
+async def leaderboard(type: str, server: str, mode: int, relax: int, page: int = 1, length: int = 100):
+    length = min(1000, length)
+    with database.session as session:
+        if (leaderboard := session.query(DBStatsCompact).filter(
+            DBStatsCompact.server == server,
+            DBStatsCompact.mode == mode,
+            DBStatsCompact.relax == relax,
+            DBStatsCompact.leaderboard_type == type,
+        )).order_by(DBStatsCompact.global_rank).offset((page - 1) * length).limit(length).all():
+            return [item for item in leaderboard]
+        return []
