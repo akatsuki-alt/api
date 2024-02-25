@@ -39,6 +39,22 @@ async def beatmap_pack(tag: str):
             return pack
         raise HTTPException(status_code=404, detail="Item not found")
 
+@app.get("/beatmap/pack/{tag}/completion")
+async def user_beatmap_pack_completion(tag: str, server: str, user_id: int, mode: int, relax: int):
+    with database.session as session:
+        sets = session.query(DBBeatmapset).filter(DBBeatmapset.pack_tags.any(tag)).all()
+        result = {
+            'completed': list(),
+            'uncompleted': list()
+        }
+        for set in sets:
+            for beatmap in set.beatmaps:
+                if session.query(DBScore).filter(DBScore.server == server, DBScore.user_id == user_id, DBScore.mode == mode, DBScore.relax == relax, DBScore.beatmap_id == beatmap.id, DBScore.completed == 3).count():
+                    result['completed'].append(beatmap.id)
+                else:
+                    result['uncompleted'].append(beatmap.id)
+        return result
+
 @app.get("/user/stats")
 async def user_stats(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.session as session:
