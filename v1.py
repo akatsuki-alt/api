@@ -7,6 +7,10 @@ from datetime import date
 from .query import build_query
 from . import app
 
+@app.get("/")
+async def root():
+    return "Akatsuki Alt V4 API"
+
 @app.get("/api/v1/user")
 async def user(server: str, id: int):
     with database.managed_session() as session:
@@ -70,14 +74,13 @@ async def user_stats(server: str, id: int, mode: int, relax: int, date: date = d
 @app.get("/api/v1/user/stats/all")
 async def user_stats_all(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.managed_session() as session:
-        if (stats := session.query(DBStats.date).filter(
+        stats = session.query(DBStats.date).filter(
             DBStats.user_id == id,
             DBStats.server == server,
             DBStats.mode == mode,
             DBStats.relax == relax,
-        ).all()):
-            return [date[0].isoformat() for date in stats]
-        raise HTTPException(status_code=404, detail="Item not found")
+        )
+        return {'total': stats.count(), 'stats': [date[0].isoformat() for date in stats]}
 
 @app.get("/api/v1/score")
 async def score(server: str, id: int):
@@ -91,9 +94,8 @@ async def query_scores(query: str, page: int = 1, length: int = 100):
     length = min(1000, length)
     with database.managed_session() as session:
         q = build_query(session.query(DBScore), DBScore, query.split(","))
-        if (scores := q.offset((page - 1) * length).limit(length).all()):
-            return [item for item in scores]
-        return []
+        scores = q.offset((page - 1) * length).limit(length)
+        return {'count': q.count(), 'scores': scores.all()}
 
 @app.get("/api/v1/leaderboard/{type}")
 async def leaderboard(type: str, server: str, mode: int, relax: int, query: str = "", page: int = 1, length: int = 100):
@@ -107,6 +109,4 @@ async def leaderboard(type: str, server: str, mode: int, relax: int, query: str 
         ).order_by(DBStatsCompact.global_rank)
         if query:
             q = build_query(q, DBStatsCompact, query.split(","))
-        if (leaderboard := q.offset((page - 1) * length).limit(length).all()):
-            return [item for item in leaderboard]
-        return []
+        return {'count': q.count(), 'stats': q.offset((page - 1) * length).limit(length).all()}
