@@ -18,7 +18,7 @@ async def user(server: str, id: int):
             return user
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/api/v1/beatmap/{id}")
+@app.get("/api/v1/beatmap")
 async def beatmap(id: int):
     with database.managed_session() as session:
         if (beatmap := session.get(DBBeatmap, id)):
@@ -26,7 +26,7 @@ async def beatmap(id: int):
             return beatmap
         raise HTTPException(status_code=404, detail="Item not found")
 
-@app.get("/api/v1/beatmapset/{id}")
+@app.get("/api/v1/beatmapset")
 async def beatmapset(id: int):
     with database.managed_session() as session:
         if (beatmapset := session.get(DBBeatmapset, id)):
