@@ -76,7 +76,7 @@ async def user_list(server: str, page: int = 1, length: int = 100, query: str = 
         return {'count': q.count(), 'users': users.all()}
 
 @app.get("/api/v1/user/first_places")
-async def user_first_places(server: str, id: int, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", date: date = None):
+async def user_first_places(server: str, id: int, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True, date: date = None):
     with database.managed_session() as session:
         q = session.query(DBFirstPlace).filter(
             DBFirstPlace.server == server, 
@@ -91,8 +91,10 @@ async def user_first_places(server: str, id: int, mode: int, relax: int, page: i
                 date = last_known.date
             else:
                 return {'date': None, 'count': 0, 'scores': []}
+        q = q.join(DBScore)
+        if sort:
+            q = q.order_by(_sort(sort, desc))
         if query:
-            q = q.join(DBScore)
             q = build_query(q, DBScore, query.split(","))
         length = min(100, length)
         q = q.offset((page - 1) * length).limit(length)
