@@ -152,7 +152,7 @@ async def query_scores(query: str, page: int = 1, length: int = 100, sort: str =
         return {'count': q.count(), 'scores': scores.all()}
 
 @app.get("/api/v1/leaderboard/{type}")
-async def leaderboard(type: str, server: str, mode: int, relax: int, query: str = "", page: int = 1, length: int = 100):
+async def leaderboard(type: str, server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True):
     length = min(1000, length)
     with database.managed_session() as session:
         q = session.query(DBStatsCompact).filter(
@@ -163,4 +163,6 @@ async def leaderboard(type: str, server: str, mode: int, relax: int, query: str 
         ).order_by(DBStatsCompact.global_rank)
         if query:
             q = build_query(q, DBStatsCompact, query.split(","))
+        if sort:
+            q = q.order_by(_sort(sort, desc))
         return {'count': q.count(), 'stats': q.offset((page - 1) * length).limit(length).all()}
