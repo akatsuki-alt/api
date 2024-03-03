@@ -166,3 +166,11 @@ async def leaderboard(type: str, server: str, mode: int, relax: int, page: int =
         if sort:
             q = q.order_by(_sort(sort, desc))
         return {'count': q.count(), 'stats': q.offset((page - 1) * length).limit(length).all()}
+
+@app.get("/api/v1/clan")
+async def clan(server: str, id: int):
+    with database.managed_session() as session:
+        if (clan := session.get(DBClan, (id, server))):
+            members = session.query(DBUser).filter(DBUser.clan_id == id, DBUser.server == server).all()
+            return {'clan': clan, 'members': members}
+        raise HTTPException(status_code=404, detail="Item not found")
