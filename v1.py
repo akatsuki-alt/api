@@ -3,9 +3,14 @@ from fastapi import HTTPException
 from common.database.objects import *
 from common.app import database
 from datetime import date
-
+from sqlalchemy import asc, desc
 from .query import build_query
 from . import app
+
+def _sort(column_name, _desc):
+    if _desc:
+        return desc(column_name)
+    return asc(column_name)
 
 @app.get("/")
 async def root():
@@ -57,6 +62,18 @@ async def user(server: str, id: int):
         if (user := session.get(DBUser, (id, server))):
             return user
         raise HTTPException(status_code=404, detail="Item not found")
+
+@app.get("/api/v1/user/list")
+async def user_list(server: str, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True):
+    length = min(100, length)
+    with database.managed_session() as session:
+        q = session.query(DBUser).filter(DBUser.server == server)
+        if query:
+            q = build_query(q, DBUser, query.split(","))
+        if sort:
+            q = q.order_by(_sort(sort, desc))
+        users = q.offset((page - 1) * length).limit(length)
+        return {'count': q.count(), 'users': users.all()}
 
 @app.get("/api/v1/user/first_places")
 async def user_first_places(server: str, id: int, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", date: date = None):
