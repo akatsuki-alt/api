@@ -112,7 +112,7 @@ async def user_stats(server: str, id: int, mode: int, relax: int, date: date = d
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/api/v1/user/stats/all")
-async def user_stats_all(server: str, id: int, mode: int, relax: int, date: date = date.today()):
+async def user_stats_all(server: str, id: int, mode: int, relax: int):
     with database.managed_session() as session:
         stats = session.query(DBStats.date).filter(
             DBStats.user_id == id,
@@ -130,11 +130,13 @@ async def score(server: str, id: int):
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/api/v1/score/search")
-async def query_scores(query: str, page: int = 1, length: int = 100):
+async def query_scores(query: str, page: int = 1, length: int = 100, sort: str = "", desc: bool = True):
     length = min(1000, length)
     with database.managed_session() as session:
         q = build_query(session.query(DBScore), DBScore, query.split(","))
         scores = q.offset((page - 1) * length).limit(length)
+        if sort:
+            q = q.order_by(_sort(sort, desc))
         return {'count': q.count(), 'scores': scores.all()}
 
 @app.get("/api/v1/leaderboard/{type}")
