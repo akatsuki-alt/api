@@ -205,6 +205,12 @@ async def clan(server: str, id: int):
             return {'clan': clan, 'members': members}
         raise HTTPException(status_code=404, detail="Item not found")
 
+@app.get("/api/v1/clan/members")
+async def clan_members(server: str, clan_id: int):
+    with database.managed_session() as session:
+        members = session.query(DBUser).filter(DBUser.clan_id == clan_id, DBUser.server == server).all()
+        return {'members': members}
+
 @app.get("/api/v1/clan/leaderboard")
 async def leaderboard(server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = False):
     length = min(1000, length)
