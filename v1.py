@@ -125,6 +125,21 @@ async def user_first_places_lookup(server: str, beatmap_id: int, mode: int = 0, 
             return first_place
         raise HTTPException(status_code=404, detail="Item not found")
 
+@app.get("/api/v1/user/first_places/history")
+async def user_first_places_history(server: str, beatmap_id: int, mode: int = 0, relax: int = 0, length: int = 100, page: int = 1):
+    length = min(100, length)
+    with database.managed_session() as session:
+        q = session.query(DBFirstPlace).filter(
+            DBFirstPlace.beatmap_id == beatmap_id,
+            DBFirstPlace.server == server,
+            DBFirstPlace.mode == mode,
+            DBFirstPlace.relax == relax
+        ).order_by(DBFirstPlace.date.desc())
+        if not q.count():
+            raise HTTPException(status_code=404, detail="Item not found")
+        q = q.offset((page - 1) * length).limit(length)
+        return q.all()
+
 @app.get("/api/v1/user/stats")
 async def user_stats(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.managed_session() as session:
