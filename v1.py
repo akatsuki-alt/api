@@ -110,6 +110,21 @@ async def user_first_places(server: str, id: int, mode: int, relax: int, page: i
         q = q.offset((page - 1) * length).limit(length)
         return {'date': date, 'count': q.count(), 'scores': [first_place.score for first_place in q.all()]}        
 
+@app.get("/api/v1/user/first_places/lookup")
+async def user_first_places_lookup(server: str, beatmap_id: int, mode: int = 0, relax: int = 0, date: date = None):
+    with database.managed_session() as session:
+        q = session.query(DBFirstPlace).filter(
+            DBFirstPlace.beatmap_id == beatmap_id,
+            DBFirstPlace.server == server,
+            DBFirstPlace.mode == mode,
+            DBFirstPlace.relax == relax
+        ).order_by(DBFirstPlace.date.desc())
+        if date:
+            q = q.filter(DBFirstPlace.date == date)
+        if (first_place := q.first()):
+            return first_place
+        raise HTTPException(status_code=404, detail="Item not found")
+
 @app.get("/api/v1/user/stats")
 async def user_stats(server: str, id: int, mode: int, relax: int, date: date = date.today()):
     with database.managed_session() as session:
