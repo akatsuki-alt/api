@@ -205,6 +205,18 @@ async def clan(server: str, id: int):
             return {'clan': clan, 'members': members}
         raise HTTPException(status_code=404, detail="Item not found")
 
+@app.get("/api/v1/clan/list")
+async def clan_list(server: str, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True):
+    length = min(100, length)
+    with database.managed_session() as session:
+        q = session.query(DBClan).filter(DBClan.server == server)
+        if query:
+            q = build_query(q, DBClan, query.split(","))
+        if sort:
+            q = q.order_by(_sort(sort, desc))
+        users = q.offset((page - 1) * length).limit(length)
+        return {'count': q.count(), 'users': users.all()}
+
 @app.get("/api/v1/clan/members")
 async def clan_members(server: str, clan_id: int):
     with database.managed_session() as session:
@@ -212,7 +224,7 @@ async def clan_members(server: str, clan_id: int):
         return {'members': members}
 
 @app.get("/api/v1/clan/leaderboard")
-async def leaderboard(server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = False):
+async def clan_leaderboard(server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = False):
     length = min(1000, length)
     with database.managed_session() as session:
         q = session.query(DBClanStatsCompact).filter(
