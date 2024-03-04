@@ -182,7 +182,7 @@ async def query_scores(query: str, page: int = 1, length: int = 100, sort: str =
         return {'count': q.count(), 'scores': scores.all()}
 
 @app.get("/api/v1/leaderboard/{type}")
-async def leaderboard(type: str, server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True):
+async def leaderboard(type: str, server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = False):
     length = min(1000, length)
     with database.managed_session() as session:
         q = session.query(DBStatsCompact).filter(
@@ -204,3 +204,21 @@ async def clan(server: str, id: int):
             members = session.query(DBUser).filter(DBUser.clan_id == id, DBUser.server == server).all()
             return {'clan': clan, 'members': members}
         raise HTTPException(status_code=404, detail="Item not found")
+
+@app.get("/api/v1/clan/leaderboard")
+async def leaderboard(server: str, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = False):
+    length = min(1000, length)
+    with database.managed_session() as session:
+        q = session.query(DBClanStatsCompact).filter(
+            DBClanStatsCompact.server == server,
+            DBClanStatsCompact.mode == mode,
+            DBClanStatsCompact.relax == relax,
+        )
+        if not query and not sort:
+            sort = "rank_pp"
+            query = "rank_pp>0"
+        if query:
+            q = build_query(q, DBClanStatsCompact, query.split(","))
+        if sort:
+            q = q.order_by(_sort(sort, desc))
+        return {'count': q.count(), 'stats': q.offset((page - 1) * length).limit(length).all()}
