@@ -137,8 +137,7 @@ async def user_first_places_history(server: str, beatmap_id: int, mode: int = 0,
         ).order_by(DBFirstPlace.date.desc())
         if not q.count():
             raise HTTPException(status_code=404, detail="Item not found")
-        q = q.offset((page - 1) * length).limit(length)
-        return q.all()
+        return {'count': q.count(), 'history': q.offset((page - 1) * length).limit(length).all()}
 
 @app.get("/api/v1/user/stats")
 async def user_stats(server: str, id: int, mode: int, relax: int, date: date = date.today()):
