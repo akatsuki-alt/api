@@ -100,11 +100,9 @@ async def user_first_places(server: str, id: int, mode: int, relax: int, page: i
             else:
                 return {'date': None, 'count': 0, 'scores': []}
         if type == "new":
-            print(date)
             old = q.distinct(DBFirstPlace.date).order_by(DBFirstPlace.date.desc()).filter(DBFirstPlace.date < date).limit(1).first()
             if not old:
                 return {'date': None, 'count': 0, 'scores': []}
-            print(old.date)
             subquery = session.query(DBFirstPlace.id).filter(
                 DBFirstPlace.server == server, 
                 DBFirstPlace.user_id == id,
