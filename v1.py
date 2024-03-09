@@ -111,6 +111,19 @@ async def user_first_places(server: str, id: int, mode: int, relax: int, page: i
                 DBFirstPlace.date == old.date
             ).subquery()
             q = q.filter(DBFirstPlace.id.not_in(subquery))
+        elif type == "lost":
+            old = q.distinct(DBFirstPlace.date).order_by(DBFirstPlace.date.desc()).filter(DBFirstPlace.date < date).limit(1).first()
+            if not old:
+                return {'date': None, 'count': 0, 'scores': []}
+            subquery = session.query(DBFirstPlace.id).filter(
+                DBFirstPlace.server == server, 
+                DBFirstPlace.user_id == id,
+                DBFirstPlace.mode == mode, 
+                DBFirstPlace.relax == relax,
+                DBFirstPlace.date == date
+            ).subquery()
+            q = q.filter(DBFirstPlace.id.not_in(subquery))
+            date = old.date
         q = q.filter(DBFirstPlace.date == date).join(DBScore)
         if sort:
             q = q.order_by(_sort(sort, desc))
