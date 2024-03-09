@@ -86,7 +86,7 @@ async def user_list(server: str, page: int = 1, length: int = 100, query: str = 
         return {'count': q.count(), 'users': users.all()}
 
 @app.get("/api/v1/user/first_places")
-async def user_first_places(server: str, id: int, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True, date: date = None):
+async def user_first_places(server: str, id: int, mode: int, relax: int, page: int = 1, length: int = 100, query: str = "", sort: str = "", desc: bool = True, date: date = None, type: str = "all"):
     with database.managed_session() as session:
         q = session.query(DBFirstPlace).filter(
             DBFirstPlace.server == server, 
@@ -94,21 +94,33 @@ async def user_first_places(server: str, id: int, mode: int, relax: int, page: i
             DBFirstPlace.mode == mode, 
             DBFirstPlace.relax == relax
         )
-        if date:
-            q = q.filter(DBFirstPlace.date == date)
-        else:
+        if not date:
             if (last_known := q.order_by(DBFirstPlace.date.desc()).first()):
                 date = last_known.date
             else:
                 return {'date': None, 'count': 0, 'scores': []}
-        q = q.join(DBScore)
+        if type == "new":
+            print(date)
+            old = q.distinct(DBFirstPlace.date).order_by(DBFirstPlace.date.desc()).filter(DBFirstPlace.date < date).limit(1).first()
+            if not old:
+                return {'date': None, 'count': 0, 'scores': []}
+            print(old.date)
+            subquery = session.query(DBFirstPlace.id).filter(
+                DBFirstPlace.server == server, 
+                DBFirstPlace.user_id == id,
+                DBFirstPlace.mode == mode, 
+                DBFirstPlace.relax == relax,
+                DBFirstPlace.date == old.date
+            ).subquery()
+            q = q.filter(DBFirstPlace.id.not_in(subquery))
+        q = q.filter(DBFirstPlace.date == date).join(DBScore)
         if sort:
             q = q.order_by(_sort(sort, desc))
         if query:
             q = build_query(q, DBScore, query.split(","))
         length = min(100, length)
         q = q.offset((page - 1) * length).limit(length)
-        return {'date': date, 'count': q.count(), 'scores': [first_place.score for first_place in q.all()]}        
+        return {'date': date, 'count': q.count(), 'scores': [first_place.score for first_place in q.all()]}
 
 @app.get("/api/v1/user/first_places/lookup")
 async def user_first_places_lookup(server: str, beatmap_id: int, mode: int = 0, relax: int = 0, date: date = None):
