@@ -25,10 +25,12 @@ async def beatmap(id: int):
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/api/v1/beatmap/search")
-async def query_beatmaps(query: str, page: int = 1, length: int = 100, sort: str = "", desc: bool = True):
+async def query_beatmaps(query: str = "", page: int = 1, length: int = 100, sort: str = "", desc: bool = True):
     length = min(1000, length)
     with database.managed_session() as session:
-        q = build_query(session.query(DBBeatmap), DBBeatmap, query.split(","))
+        q = session.query(DBBeatmap)
+        if query:
+            q = build_query(q, DBBeatmap, query.split(","))
         if sort:
             q = q.order_by(_sort(sort, desc))
         beatmaps = q.offset((page - 1) * length).limit(length)
